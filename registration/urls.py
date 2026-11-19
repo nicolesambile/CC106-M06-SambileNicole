@@ -16,4 +16,10 @@ urlpatterns =[
         name='student_update'),
     path('students/<int:pk>/delete/', views.student_delete,
         name='student_delete'),
+
+    path(
+        'dashboard/',
+        views.staff_dashboard,
+        name='staff_dashboard'
+    ),
 ]

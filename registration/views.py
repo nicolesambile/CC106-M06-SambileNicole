@@ -4,9 +4,14 @@ from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q, query
+from django.contrib.auth.decorators import user_passes_test
+from django.shortcuts import render
 
 from .models import Student
 from .forms import StudentForm
+
+def staff_check(user):
+    return user.is_authenticated and user.is_staff
 
 def student_registration(request):
     if request.method == 'POST':
@@ -52,11 +57,33 @@ def student_list(request):
         'students': students,
         'query': query,
     }
-    return render(
-        request, 
-        'registration/student_list.html', 
-        context)
+@user_passes_test(staff_check, login_url='login')
+def student_list(request):
+    search_query = request.GET.get('q', '').strip()
 
+    students = Student.objects.all().order_by(
+        'last_name', 'first_name'
+    )
+
+    if search_query:
+        students = students.filter(
+            Q(student_id__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        )
+
+    context = {
+        'students': students,
+        'query': search_query,
+    }
+
+    return render(
+        request,
+        'registration/student_list.html',
+        context
+    )
+
+@user_passes_test(staff_check, login_url='login')
 def student_detail(request, pk):
     student = get_object_or_404(Student, pk=pk)
 
@@ -65,7 +92,8 @@ def student_detail(request, pk):
         'registration/student_detail.html',
         {'student': student}
     )
-    
+
+@user_passes_test(staff_check, login_url='login')
 def student_create(request):
     if request.method == 'POST':
         form = StudentForm(request.POST)
@@ -83,7 +111,8 @@ def student_create(request):
         'registration/student_form.html',
         {'form': form, 'page_title': 'Register Student'}
     )
-    
+
+@user_passes_test(staff_check, login_url='login')
 def student_update(request, pk):
     student = get_object_or_404(Student, pk=pk)
     
@@ -108,6 +137,7 @@ def student_update(request, pk):
         }
     )
 
+@user_passes_test(staff_check, login_url='login')
 def student_delete(request, pk):
     student = get_object_or_404(Student, pk=pk)
     if request.method == 'POST':
@@ -122,3 +152,11 @@ def student_delete(request, pk):
         'registration/student_confirm_delete.html',
         {'student': student}
     )
+
+@user_passes_test(staff_check, login_url='login')
+def staff_dashboard(request):
+    return render(
+        request,
+        'registration/dashboard.html'
+    )
+
